@@ -1,0 +1,42 @@
+version: '3.9'
+services:
+    # Сервис для разворачивания контейнера с базой данных
+    database:
+        image: postgres:14
+        restart: always
+        
+        environment:
+        - POSTGRES_DB=animal-chipization
+        - POSTGRES_USER=user
+        - POSTGRES_PASSWORD=password
+        expose:
+          - 5432
+        volumes:
+            - ./dump:/var/lib/postgresql/data
+        # Сервис для разворачивания контейнера с приложением
+    backend:
+        image: backend
+        build:
+          context: .
+          dockerfile: ../Sources/backend/Dockerfile
+        restart: always
+        command: >
+              bash -c " python manage.py runserver 0.0.0.0:8080 --settings=api.settings.base"
+        ports:
+        - "8080:8080"
+        depends_on:
+        - database
+        environment:
+        - POSTGRES_USER=user
+        - POSTGRES_PASSWORD=password
+        # Сервис для разворачивания контейнера с автотестами
+    tests: 
+        image: mrexpen/planet_olymp_phase1
+        pull_policy: always
+        ports:
+        - "8090:8080"
+        depends_on:
+        - backend
+        environment:
+            SERVER_URL: http://backend:8080
+            STAGE: all
